@@ -30,7 +30,7 @@ my $csv = Text::CSV_XS->new({
 	allow_whitespace => 1,
 	allow_loose_escapes => 1});
 
-process_csv($csv, $lines);
+process_csv($csv, $sep, $lines);
 
 sub Usage {
 	(my $prog = $0) =~ s,.*/,,;
@@ -44,9 +44,9 @@ Usage: $0 [options] [filename]
 Options:
     -c columns      display only given columns (number or range, e.g. 1,3-5)
     -d delimiter    overrides the guessed delimiting character
-	-l              add a first column containing the line number
+    -l              add a first column containing the line number
     -h              print this help text
-	-o string       field separator in output, e.g. ' | ' or ' '
+    -o string       field separator in output, e.g. ' | ' or ' '
     -q quote_char   override the default quote character (")
     -y #_of_lines   # of lines to determine field width (1000), 0 for unlimited
     -z max_fld_size maximum field width, wrap (+num) or truncate ('-num')
@@ -93,7 +93,7 @@ sub get_separator {
 }
 
 sub process_csv {
-	my ($csv, $lines) = @_;
+	my ($csv, $sep, $lines) = @_;
 	my (@size, @isnum, @rows, @selrow);
 	# calculate columns to use for display
 	if ($opt_c) {
@@ -104,6 +104,12 @@ sub process_csv {
 			$selrow[$_] = 1 for ($beg .. $end);
 		}
 		$selrow[$_] = 1 for grep{/^\d+$/} @ranges;
+	}
+	#print first lines without separator character
+	for my $line (@$lines) {
+		last if $line =~ /$sep/;
+		print $line;
+		shift @$lines;
 	}
 	# determine field length and field type
 	for my $line (@$lines) {
@@ -121,7 +127,6 @@ sub process_csv {
 			push @$fields, $fld;
 			$i++;
 		}
-		# header should not contain numbers
 		undef @isnum if $line eq $lines->[0];
 		die "no data to display\n" if ! defined $fields;
 		push @rows, $fields;
@@ -129,6 +134,7 @@ sub process_csv {
 	# do we have a header line
 	my $has_header = 1;
 	for (@{$rows[0]}) {
+		# header should not contain numbers
 		$has_header = 0 if /^[-+.,\s\d]+$/;
 	}
 	my ($tline, $sepchr);

@@ -1,0 +1,57 @@
+.TH CSVTABLE "1" "January 2024" "csvtable" "User Commands"
+.SH NAME
+csvtable \- Tabular view of csv files
+.SH SYNOPSIS
+.B csvtable
+[\fIOPTIONS\fR] [\fIFILENAME\fR]
+.SH DESCRIPTION
+.PP
+Tabular view of input from a file or STDIN which consists of comma separated
+values. The program tries to be as fault tolerant as possible: e.g. mixed utf-8
+and non utf-8 chars may get displayed correctly, the delimiter for csv fields
+is normally guessed from the list of (, ; | : and TAB) characters, the field
+width is guessed and kept at minimal size. Empty lines will not be displayed.
+The program tolerates bad quoting, lines with varying number of fields, etc.
+and keeps warning and error messages at the bare minimum.
+
+
+.SH OPTIONS
+.TP
+.B \-c columns
+Display only given columns (number or range, e.g. 1,3-5). If that leads to a
+line with empty fields only, that line will not be displayed.
+.TP
+.B \d delimiter
+Overrides the guessed delimiting character
+.TP
+.B \-h
+Print a short help text
+.TP
+.B \-l
+Add a first column containing the line number. That is useful to identify
+empty lines or (using \-c number) to display non empty fields in a single
+column together with the line numbers.
+.TP
+.B \-o string
+This overrides the default drawing of the frames around the table and the
+columns, which is inspired by the \fBrich\fP --csv output. More than one char
+can be given. Before the leftmost column and after the rightmost column
+white space in the string before respectively after any nonblank chars will
+be removed.
+.TP
+.B \-q quote_char
+Override the default quote character (")
+.TP
+.B \-y #_of_lines
+Number of lines to determine the field width of the columns. The default is
+1000 lines, for \-y 0 all lines get analyzed. As the lines get temporarily
+stored in memory, do not use that option for huge files. That option is also
+used for guessing the field delimiter, if in the first line[s] no delimiter
+is found.
+.TP
+.B \-z max_field_size
+The maximum field width for a column. Contents that exceeds the size, is
+wrapped on continuing lines (max_field_size > 0) or truncated (size < 0).
+
+.SH AUTHOR
+Wolfgang Friebel
