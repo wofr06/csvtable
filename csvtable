@@ -159,7 +159,7 @@ sub process_csv {
 	}
 	# skip BOM
 	my $BOM = "\x{ef}\x{bb}\x{bf}"; my $BOM2 = "\x{ef}\x{ff}";
-	shift @rows if ($rows[0]->[0] =~ /^$BOM|^$BOM2/;
+	shift @rows if $rows[0]->[0] =~ /^$BOM|^$BOM2/;
 	if ($has_header) {
 		my $tline = '┡';
 		$tline .= '━' x ($numsz + 2) . '╇' if $opt_l;
