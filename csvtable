@@ -105,6 +105,9 @@ sub process_csv {
 		}
 		$selrow[$_] = 1 for grep{/^\d+$/} @ranges;
 	}
+	my $BOM = "\x{ef}\x{bb}\x{bf}"; my $BOM2 = "\x{ef}\x{ff}";
+	# skip BOM
+	shift @$lines if $lines->[0] =~ /^$BOM|^$BOM2/;
 	#print first lines without separator character
 	for my $line (@$lines) {
 		last if $line =~ /$sep/;
@@ -157,9 +160,6 @@ sub process_csv {
 	} else {
 		$sepchr = $opt_o;
 	}
-	# skip BOM
-	my $BOM = "\x{ef}\x{bb}\x{bf}"; my $BOM2 = "\x{ef}\x{ff}";
-	shift @rows if $rows[0]->[0] =~ /^$BOM|^$BOM2/;
 	if ($has_header) {
 		my $tline = '┡';
 		$tline .= '━' x ($numsz + 2) . '╇' if $opt_l;
