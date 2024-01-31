@@ -107,7 +107,8 @@ sub process_csv {
 	}
 	my $BOM = "\x{ef}\x{bb}\x{bf}"; my $BOM2 = "\x{ef}\x{ff}";
 	# skip BOM
-	shift @$lines if $lines->[0] =~ /^$BOM|^$BOM2/;
+	$lines->[0] =~ s/^$BOM|^$BOM2//;
+	shift @$lines if $lines->[0] =~ /^[\s$sep]*$/;
 	#print first lines without separator character
 	for my $line (@$lines) {
 		last if $line =~ /$sep/;
