@@ -1,11 +1,15 @@
 #!/usr/bin/perl
+use utf8;
 use strict;
 use warnings;
 use Getopt::Std;
-use Text::CSV_XS;
+use Text::CSV;
+use Module::Load::Conditional qw[can_load];
 
-our($opt_c, $opt_d, $opt_h, $opt_l, $opt_o, $opt_q, $opt_y, $opt_z);
-getopts('c:d:hilo:q:y:z:') || exit 2;
+my $ok = can_load( modules => { 'Unicode::GCString'  => undef });
+
+our($opt_c, $opt_d, $opt_h, $opt_H, $opt_l, $opt_o, $opt_q, $opt_y, $opt_z);
+getopts('c:d:fhHilo:q:y:z:') || exit 2;
 # number of lines to determine maximum field width
 my $max_lines = $opt_y || 1000;
 Usage() if $opt_h;
@@ -17,6 +21,8 @@ if (! $file or $file eq '-') {
 } else {
 	open $fh, $file or die "$file: $!";
 }
+binmode($fh, ":encoding(utf8)");
+binmode(STDOUT, ":encoding(utf8)");
 
 my ($sep, $lines) = get_separator($max_lines, $fh, $opt_d);
 
@@ -40,12 +46,14 @@ Usage: $0 [options] [filename]
     as possible: e.g. mixed latin1/utf-8 chars, guessing delimiter for csv
     fields (, ; | : and TAB), guessing field width, tolerates bad quoting,
     lines with different number of fields, missing separator char in input etc.
-    Not yet extensively tested, use at own risk.
+	For correct wide character handling the perl module Unicode::GCString is
+    recommended.
 Options:
     -c columns      display only given columns (number or range, e.g. 1,3-5)
     -d delimiter    overrides the guessed delimiting character
     -l              add a first column containing the line number
     -h              print this help text
+    -H              no header line
     -o string       field separator in output, e.g. ' | ' or ' '
     -q quote_char   override the default quote character (")
     -y #_of_lines   # of lines to determine field width (1000), 0 for unlimited
@@ -65,7 +73,6 @@ sub get_separator {
 	my %seps;
 	$seps{$fixed_sep} = 1 if $fixed_sep;
 	while (<$fh>) {
-		utf8::upgrade($_);
 		push @$lines, $_;
 		last if $max_lines and $. > $max_lines;
 		next if keys %seps;
@@ -126,7 +133,8 @@ sub process_csv {
 			$isnum[$i] = 1 if ! defined $isnum[$i];
 			$fld =~ s/^\s+//; $fld =~ s/\s+$//;
 			$isnum[$i] = 0 if $fld and $fld !~ /^["']?[-+.,\d]*["']?$/;
-			$size[$i] = utflen($fld) if ($size[$i] || 0) <= utflen($fld);
+			my $len = stringwidth($fld);
+			$size[$i] = $len if ($size[$i] || 0) <= $len;
 			$size[$i] = abs($opt_z) if $opt_z and abs($opt_z) < $size[$i];
 			push @$fields, $fld;
 			$i++;
@@ -135,40 +143,44 @@ sub process_csv {
 		die "no data to display\n" if ! defined $fields;
 		push @rows, $fields;
 	}
+	# prevent zero width columns
+	$_ ||= 1 for @size;
 	# do we have a header line
-	my $has_header = 1;
+	my $has_header = $opt_H ? 0 : 1;
 	for (@{$rows[0]}) {
 		# header should not contain numbers
 		$has_header = 0 if /^[-+.,\s\d]+$/;
 	}
 	my ($tline, $sepchr);
+	# first pseudo column line number has minimum length 4
 	my $numsz = ($. < $max_lines) ? length $. : 4;
 	if (! defined $opt_o) {
 		my @boxc = ([qw(┌ ─ ┬ ┐)], [qw(┏ ━ ┳ ┓)]);
 		my $chr = $boxc[$has_header];
 		my $hline = $chr->[0];
-		$tline = '└';
+		$tline = "└";
 		if ($opt_l) {
 			$hline .= $chr->[1] x ($numsz + 2) . $chr->[2];
-			$tline .= '─' x ($numsz + 2) . '┴';
+			$tline .=  "─"x ($numsz + 2) . "┴";
 		}
 		for (my $i=0; $i < @size; $i++) {
 			$hline .= $chr->[1]x($size[$i]+2) . ($i < $#size ? $chr->[2] : '');
-			$tline .= '─'x($size[$i]+2) . ($i < $#size ? '┴' : '');
+			$tline .= "─"x($size[$i]+2) . ($i < $#size ? "┴" : '');
 		}
+
 		print "$hline$chr->[3]\n";
-		$sepchr = ' │ ';
+		$sepchr = " │ ";
 	} else {
 		$sepchr = $opt_o;
 	}
 	if ($has_header) {
-		my $tline = '┡';
-		$tline .= '━' x ($numsz + 2) . '╇' if $opt_l;
+		my $tline = "┡";
+		$tline .= "━" x ($numsz + 2) .  "╇" if $opt_l;
 		my $sepchr = $opt_o;
 		if ( ! defined $opt_o) {
-			$sepchr = ' ┃ ';
-			$tline .= '━'x($_+2) . '╇' for @size;
-			substr($tline, -3, 3, '');
+			$sepchr = " ┃ ";
+			$tline .= "━"x($_+2) . "╇" for @size;
+			substr($tline, -1, 1, '');
 		}
 		print_line(shift @rows, \@size, \@isnum, $sepchr, ' 'x($numsz -1) . 1);
 		print "$tline┩\n" if ! defined $opt_o;
@@ -176,7 +188,6 @@ sub process_csv {
 	my $lineno = 2;
 	print_line($_, \@size, \@isnum, $sepchr, sprintf("%${numsz}d", $lineno++)) for @rows;
 	while (<$fh>) {
-		utf8::upgrade($_);
 		next if ! $csv->parse($_);
 		my @row = $csv->fields();
 		my $fields;
@@ -190,16 +201,21 @@ sub process_csv {
 }
 
 sub print_line {
-	# print with UTF has some problems, use a dirty hack
 	my ($str, $size, $isnum, $sep, $lnum) = @_;
 	push @$str, '' while @$str < @$size;
 	s/^\s+// for @$str; s/\s+$// for @$str;
 	while ("@$str" !~ /^\s*$/) {
+		#print ":@$str:\n";
 		my @h2;
 		for (my $i = 0; $i < @$str; $i++) {
-			my $len = utflen($str->[$i], $size->[$i]);
-			$h2[$i] = substr $str->[$i], 0, $len, '';
-			my $num = $size->[$i] - utflen($h2[$i]);
+			$h2[$i] = substr $str->[$i], 0, $size->[$i], '';
+			my $len = stringwidth($h2[$i]);
+			my $num = $size->[$i] - $len;
+			while ($num < 0) {
+				$str->[$i] = substr($h2[$i], -1, 1, '') . $str->[$i];
+				$len = stringwidth($h2[$i]);
+				$num = $size->[$i] - $len;
+			}
 			$h2[$i] .= " " x $num if $num > 0 and ! $isnum->[$i];
 			$h2[$i] = " " x $num . $h2[$i] if $num > 0 and $isnum->[$i];
 		}
@@ -211,15 +227,11 @@ sub print_line {
 	}
 }
 
-sub utflen {
-	my ($str, $len) = @_;
-	my @bytes = split '', $str;
-	my $chrlen = $len || @bytes;
-	my $l = 0;
-	my $chars = 0;
-	while ($chrlen-- and $l < @bytes) {
-		$l += unpack('%B4', $bytes[$l - 1]) - 1 if ord($bytes[$l++]) > 191;
-		$chars++;
+sub stringwidth {
+	(my $str) = @_;
+	if ($ok) {
+		return Unicode::GCString->new($str)->columns;
+	} else {
+		return length($str);
 	}
-	return $len ? $l : $chars;
 }
