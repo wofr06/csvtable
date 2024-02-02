@@ -17,42 +17,42 @@ and keeps warning and error messages at the bare minimum.
 
 .SH OPTIONS
 .TP
-.B \-c columns
+.B \-c number_or_range --columns=number_or_range
 Display only given columns (number or range, e.g. 1,3-5). If that leads to a
 line with empty fields only, that line will not be displayed.
 .TP
-.B \d delimiter
+.B \-d character --delimiter=character
 Overrides the guessed delimiting character
 .TP
-.B \-h
+.B \-h --help
 Print a short help text
 .TP
-.B \-H
+.B \-H --no-header-row
 Do not assume a header line
 .TP
-.B \-l
+.B \-l --linenumbers
 Add a first column containing the line number. That is useful to identify
 empty lines or (using \-c number) to display non empty fields in a single
 column together with the line numbers.
 .TP
-.B \-o string
+.B \-o string --output-field-separator=string
 This overrides the default drawing of the frames around the table and the
 columns, which is inspired by the \fBrich\fP --csv output. More than one char
 can be given. Before the leftmost column and after the rightmost column
 white space in the string before respectively after any nonblank chars will
 be removed.
 .TP
-.B \-q quote_char
+.B \-q character --quotechar=character
 Override the default quote character (")
 .TP
-.B \-y #_of_lines
+.B \-y #_of_lines --snifflimit=#_of_lines
 Number of lines to determine the field width of the columns. The default is
 1000 lines, for \-y 0 all lines get analyzed. As the lines get temporarily
 stored in memory, do not use that option for huge files. That option is also
 used for guessing the field delimiter, if in the first line[s] no delimiter
 is found.
 .TP
-.B \-z max_field_size
+.B \-z max_field_size --maxfieldsize=max_field_size
 The maximum field width for a column. Contents that exceeds the size, is
 wrapped on continuing lines (max_field_size > 0) or truncated (size < 0).
 
