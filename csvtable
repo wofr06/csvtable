@@ -23,7 +23,7 @@ GetOptions(
 my $ok = can_load( modules => {'Unicode::GCString' => undef});
 
 # number of lines to determine maximum field width
-my $max_lines = $opt{y} || 1000;
+my $max_lines = $opt{y} // 1000;
 Usage() if $opt{h};
 
 my $fh;
