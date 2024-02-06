@@ -121,10 +121,8 @@ sub process_csv {
 		}
 		$selrow[$_] = 1 for grep{/^\d+$/} @ranges;
 	}
-	my $BOM = "\x{ef}\x{bb}\x{bf}"; my $BOM2 = "\x{ef}\x{ff}";
 	# skip BOM
-	$lines->[0] =~ s/^$BOM|^$BOM2//;
-	shift @$lines if $lines->[0] =~ /^[\s$sep]*$/;
+	shift @$lines if $lines->[0] =~ /^\x{feff}[\s$sep]*$/;
 	# determine field length and field type
 	my $skip = 1;
 	for my $line (@$lines) {
