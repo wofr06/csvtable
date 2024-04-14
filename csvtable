@@ -113,13 +113,23 @@ sub process_csv {
 	my (@size, @isnum, @rows, @selrow);
 	# calculate columns to use for display
 	if ($opt{c}) {
+		my $col = 0;
 		$opt{c} =~ s/\s//g;
 		my @ranges = split /,/, $opt{c};
-		for (grep{/-/} @ranges) {
-			my ($beg, $end) = split /-/;
-			$selrow[$_] = 1 for ($beg .. $end);
+		for (@ranges) {
+			if (/^(\d+)-(\d+)$/ and $1 and $2) {
+				my $beg = $1;
+				my $step = $beg > $2 ? -1 : 1;
+				do {
+					$selrow[$beg-1] = $col++;
+					$beg += $step;
+				} while $beg - $step != $2;
+			} elsif (/^\d+$/ and $_) {
+				$selrow[$_-1] = $col++;
+			} else {
+				die "### $_ is not a valid range or field number\n";
+			}
 		}
-		$selrow[$_] = 1 for grep{/^\d+$/} @ranges;
 	}
 	# skip BOM
 	shift @$lines if $lines->[0] =~ /^\x{feff}[\s$sep]*$/;
@@ -135,23 +145,25 @@ sub process_csv {
 		next if $skip;
 		next if ! $csv->parse($line);
 		my @row = $csv->fields();
-		my $i = 0; my $j = 1;
+		my $i = 0;
 		my $fields;
 		for my $fld (@row) {
-			next if $opt{c} and ! $selrow[$j++];
-			$isnum[$i] = 1 if ! defined $isnum[$i];
-			$fld =~ s/^\s+//; $fld =~ s/\s+$//;
-			$isnum[$i] = 0 if $fld and $fld !~ /^["']?[-+.,\d]*["']?$/;
-			my $len = stringwidth($fld);
-			$size[$i] = $len if ($size[$i] || 0) <= $len;
-			$size[$i] = abs($opt{z}) if $opt{z} and abs($opt{z}) < $size[$i];
-			push @$fields, $fld;
+			my $j = $opt{c} ? $selrow[$i] : $i;
+			if (defined $j) {
+				$isnum[$j] = 1 if ! defined $isnum[$j];
+				$fld =~ s/^\s+//; $fld =~ s/\s+$//;
+				$isnum[$j] = 0 if $fld and $fld !~ /^["']?[-+.,\d]*["']?$/;
+				my $len = stringwidth($fld);
+				$size[$j] = $len if ($size[$j] || 0) <= $len;
+				$size[$j] = abs($opt{z}) if $opt{z} and abs($opt{z}) < $size[$j];
+				$fields->[$j] = $fld if $fld;
+			}
 			$i++;
 		}
 		undef @isnum if $line eq $lines->[0];
-		die "no data to display\n" if ! defined $fields;
-		push @rows, $fields;
+		push @rows, $fields if $fields;
 	}
+	die "no data to display\n" if ! @rows;
 	# do we have a header line
 	my $has_header = ($opt{H} or ! defined $rows[0]) ? 0 : 1;
 	for (@{$rows[0]}) {
@@ -210,7 +222,11 @@ sub process_csv {
 sub print_line {
 	my ($str, $size, $isnum, $sep, $lnum) = @_;
 	push @$str, '' while @$str < @$size;
-	s/^\s+// for @$str; s/\s+$// for @$str;
+	for (@$str) {
+		$_ = '' if ! defined $_;
+		s/^\s+//;
+		s/\s+$//;
+	}
 	while ("@$str" !~ /^\s*$/) {
 		my @h2;
 		for (my $i = 0; $i < @$str; $i++) {
