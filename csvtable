@@ -6,6 +6,7 @@ use Text::CSV;
 use Module::Load::Conditional qw[can_load];
 use Getopt::Long;
 use vars qw(%opt);
+my $VERSION=1.00;
 
 Getopt::Long::Configure ("bundling");
 GetOptions(
@@ -52,6 +53,7 @@ process_csv($csv, $sep, $lines, $max_lines);
 
 sub Usage {
 	(my $prog = $0) =~ s,.*/,,;
+	printf STDERR "%s version %.2f\n", $prog, $VERSION;
 	warn <<EOF;
 Usage: $0 [options] [filename]
     Tabular view of a csv file from a file or STDIN. Tries to be as tolerant
