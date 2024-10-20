@@ -33,7 +33,7 @@ uninstall:
 	rm $(MANDIR)/csvtable.1
 
 clean:
-	rm -f csvtable-$(VERSION).tar.gz
+	rm -f *.tar.gz
 
 dist: clean
 	@git archive --format=tar.gz --prefix=csvtable-$(VERSION)/ \
